@@ -10,9 +10,9 @@ import (
 	"github.com/ogrock3t/go-marketplace-microservices/authentication-service/internal/service"
 )
 
-var (
-	validate = validator.New()
+var validate = validator.New()
 
+const (
 	ErrInternalServer = "internal server error"
 	ErrInvalidJSON    = "invalid json"
 )
@@ -119,7 +119,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1048576) // Limit request body to 1MB
 	defer r.Body.Close()
-	
+
 	var req dto.RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, ErrInvalidJSON, http.StatusBadRequest)
