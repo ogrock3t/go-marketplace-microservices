@@ -259,3 +259,40 @@ func (s *ProductStorage) ReserveProduct(ctx context.Context, id int64, quantity 
 
 	return nil, domain.ErrInsufficientStock
 }
+
+func (s *ProductStorage) ReleaseProduct(ctx context.Context, id int64, quantity int64) (*domain.Product, error) {
+	const query = `
+		UPDATE products
+		SET
+			available_quantity = available_quantity + $2,
+			status = CASE
+				WHEN status = $3 THEN $4
+				ELSE status
+			END,
+			updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, seller_id, category_id, name, description, price, available_quantity, status, created_at, updated_at
+	`
+
+	var product domain.Product
+	err := s.connect.pool.QueryRow(ctx, query, id, quantity, domain.StatusOutOfStock, domain.StatusActive).Scan(
+		&product.ID,
+		&product.SellerID,
+		&product.CategoryID,
+		&product.Name,
+		&product.Description,
+		&product.Price,
+		&product.AvailableQuantity,
+		&product.Status,
+		&product.CreatedAt,
+		&product.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrProductNotFound
+		}
+		return nil, fmt.Errorf("failed to release product on postgres: %w", err)
+	}
+
+	return &product, nil
+}

@@ -31,7 +31,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      DATABASE_DSN: ${PRODUCT_DATABASE_DSN}
+      DATABASE_DSN: ${PRODUCT_DATABASE_DSN:-postgres://user:pass@product-postgres:5432/productdb?sslmode=disable}
       HTTP_ADDR: ":8081"
     depends_on:
       product-postgres:
@@ -40,13 +40,61 @@ services:
   product-postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: ${PRODUCT_POSTGRES_USER}
-      POSTGRES_PASSWORD: ${PRODUCT_POSTGRES_PASSWORD}
-      POSTGRES_DB: ${PRODUCT_POSTGRES_DB}
+      POSTGRES_USER: ${PRODUCT_POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${PRODUCT_POSTGRES_PASSWORD:-pass}
+      POSTGRES_DB: ${PRODUCT_POSTGRES_DB:-productdb}
     ports:
       - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PRODUCT_POSTGRES_USER} -d ${PRODUCT_POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  order-service:
+    build: ./order-service
+    ports:
+      - "8082:8082"
+    environment:
+      DATABASE_DSN: ${ORDER_DATABASE_DSN:-postgres://user:pass@order-postgres:5432/orderdb?sslmode=disable}
+      HTTP_ADDR: ":8082"
+      PRODUCT_SERVICE_URL: http://product-service:8081
+      KAFKA_BROKERS: kafka:9092
+      ORDER_EVENTS_TOPIC: orders
+      PAYMENT_EVENTS_TOPIC: payments
+    depends_on:
+      order-postgres:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+      kafka:
+        condition: service_started
+
+  order-postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${ORDER_POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${ORDER_POSTGRES_PASSWORD:-pass}
+      POSTGRES_DB: ${ORDER_POSTGRES_DB:-orderdb}
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: bitnami/kafka:3.7
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: "broker,controller"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"

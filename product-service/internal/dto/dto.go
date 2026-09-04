@@ -25,6 +25,10 @@ type ReserveProductRequest struct {
 	Quantity int64 `json:"quantity" validate:"required,gt=0"`
 }
 
+type ReleaseProductRequest struct {
+	Quantity int64 `json:"quantity" validate:"required,gt=0"`
+}
+
 type CreateSellerRequest struct {
 	FirstName string `json:"first_name" validate:"required"`
 	LastName  string `json:"last_name" validate:"required"`

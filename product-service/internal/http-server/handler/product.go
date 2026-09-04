@@ -212,3 +212,39 @@ func (h *ProductHandler) ReserveProduct(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
 }
+
+func (h *ProductHandler) ReleaseProduct(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1048576)
+	defer r.Body.Close()
+
+	id, err := parsePathID(r, "id")
+	if err != nil {
+		writeJSONError(w, "invalid product id", http.StatusBadRequest)
+		return
+	}
+
+	var req dto.ReleaseProductRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, ErrInvalidJSON, http.StatusBadRequest)
+		return
+	}
+
+	if err := validate.Struct(req); err != nil {
+		writeJSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	resp, err := h.productService.ReleaseProduct(r.Context(), id, &req)
+	if err != nil {
+		if errors.Is(err, domain.ErrProductNotFound) {
+			writeJSONError(w, ErrorProductNotFound, http.StatusNotFound)
+			return
+		}
+		writeJSONError(w, ErrInternalServer, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
+}

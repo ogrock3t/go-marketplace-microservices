@@ -132,3 +132,12 @@ func (s *ProductService) ReserveProduct(ctx context.Context, id int64, req *dto.
 
 	return productToResponse(product), nil
 }
+
+func (s *ProductService) ReleaseProduct(ctx context.Context, id int64, req *dto.ReleaseProductRequest) (*dto.GetProductByIDResponse, error) {
+	product, err := s.productRepo.ReleaseProduct(ctx, id, req.Quantity)
+	if err != nil {
+		return nil, err
+	}
+
+	return productToResponse(product), nil
+}

@@ -33,6 +33,7 @@ func NewRouter(
 	mux.HandleFunc("PUT /api/v1/products/{id}", productHandler.UpdateProductByID)
 	mux.HandleFunc("DELETE /api/v1/products/{id}", productHandler.DeleteProduct)
 	mux.HandleFunc("POST /api/v1/products/{id}/reserve", productHandler.ReserveProduct)
+	mux.HandleFunc("POST /api/v1/products/{id}/release", productHandler.ReleaseProduct)
 	mux.HandleFunc("GET /api/v1/sellers/{id}/products", productHandler.ListProductsBySeller)
 	mux.HandleFunc("GET /api/v1/categories/{id}/products", productHandler.ListProductsByCategory)
 

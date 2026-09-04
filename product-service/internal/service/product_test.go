@@ -48,6 +48,11 @@ func (m *productRepoMock) ReserveProduct(_ context.Context, id int64, quantity i
 	return m.product, nil
 }
 
+func (m *productRepoMock) ReleaseProduct(_ context.Context, id int64, quantity int64) (*domain.Product, error) {
+	m.product.AvailableQuantity += quantity
+	return m.product, nil
+}
+
 func TestCreateProductDefaultsStatus(t *testing.T) {
 	repo := &productRepoMock{}
 	service := NewProductService(repo)

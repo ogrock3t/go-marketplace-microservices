@@ -13,4 +13,5 @@ type ProductRepository interface {
 	ListProductsBySeller(ctx context.Context, sellerID int64) ([]*domain.Product, error)
 	ListProductsByCategory(ctx context.Context, categoryID int64) ([]*domain.Product, error)
 	ReserveProduct(ctx context.Context, id int64, quantity int64) (*domain.Product, error)
+	ReleaseProduct(ctx context.Context, id int64, quantity int64) (*domain.Product, error)
 }
