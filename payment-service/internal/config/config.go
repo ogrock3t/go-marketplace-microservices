@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -12,9 +13,15 @@ type Config struct {
 	OrderEventsTopic     string
 	PaymentEventsTopic   string
 	PaymentConsumerGroup string
+	ShutdownTimeout      time.Duration
 }
 
 func Load() *Config {
+	shutdownTimeout, err := time.ParseDuration(getEnv("SHUTDOWN_TIMEOUT", "10s"))
+	if err != nil {
+		shutdownTimeout = 10 * time.Second
+	}
+
 	return &Config{
 		HTTPAddr:             getEnv("HTTP_ADDR", ":8083"),
 		DatabaseDSN:          getEnv("DATABASE_DSN", ""),
@@ -22,6 +29,7 @@ func Load() *Config {
 		OrderEventsTopic:     getEnv("ORDER_EVENTS_TOPIC", "orders"),
 		PaymentEventsTopic:   getEnv("PAYMENT_EVENTS_TOPIC", "payments"),
 		PaymentConsumerGroup: getEnv("PAYMENT_CONSUMER_GROUP", "payment-service"),
+		ShutdownTimeout:      shutdownTimeout,
 	}
 }
 

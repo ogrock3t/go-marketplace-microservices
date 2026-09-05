@@ -13,6 +13,11 @@ import (
 func NewRouter(h *handler.AuthHandler, log *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
+
 	mux.HandleFunc("POST /register", h.Register)
 	mux.HandleFunc("POST /login", h.Login)
 	mux.HandleFunc("POST /refresh-token", h.RefreshToken)

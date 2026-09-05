@@ -73,12 +73,35 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
+	httpServer := &http.Server{
+		Addr:    cfg.HTTPAddr,
+		Handler: mux,
+	}
 
-	log.Info("starting health server", "addr", cfg.HTTPAddr)
-	if err := http.ListenAndServe(cfg.HTTPAddr, mux); err != nil {
-		log.Error("server error", "error", err)
+	errCh := make(chan error, 1)
+	go func() {
+		log.Info("starting health server", "addr", cfg.HTTPAddr)
+		errCh <- httpServer.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Info("shutdown signal received")
+	case err := <-errCh:
+		if err != nil && err != http.ErrServerClosed {
+			log.Error("server error", "error", err)
+			os.Exit(1)
+		}
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	defer cancel()
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Error("failed to shutdown server", "error", err)
 		os.Exit(1)
 	}
+
+	log.Info("Payment Service stopped")
 }
 
 func migrationDSN(dsn string) string {

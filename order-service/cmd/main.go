@@ -53,7 +53,12 @@ func main() {
 	defer db.Close()
 
 	orderStorage := storage.NewOrderStorage(db)
-	productClient := productclient.NewClient(cfg.ProductServiceURL, &http.Client{Timeout: cfg.RequestTimeout})
+	productClient, err := productclient.NewClient(cfg.ProductGRPCAddr)
+	if err != nil {
+		log.Error("failed to create product client", "error", err)
+		os.Exit(1)
+	}
+	defer productClient.Close()
 	publisher := events.Publisher(events.NewLogPublisher(log))
 	if cfg.KafkaBrokers != "" {
 		kafkaBrokers := splitCSV(cfg.KafkaBrokers)
@@ -66,6 +71,10 @@ func main() {
 	orderService := service.NewOrderService(orderStorage, productClient, publisher)
 	orderHandler := handler.NewOrderHandler(orderService)
 	router := httpserver.NewRouter(orderHandler, log)
+	httpServer := &http.Server{
+		Addr:    cfg.HTTPAddr,
+		Handler: router,
+	}
 
 	if cfg.KafkaBrokers != "" {
 		go events.RunPaymentProcessedConsumer(
@@ -78,11 +87,30 @@ func main() {
 		)
 	}
 
-	log.Info("starting server", "addr", cfg.HTTPAddr)
-	if err := http.ListenAndServe(cfg.HTTPAddr, router); err != nil {
-		log.Error("server error", "error", err)
+	errCh := make(chan error, 1)
+	go func() {
+		log.Info("starting server", "addr", cfg.HTTPAddr)
+		errCh <- httpServer.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Info("shutdown signal received")
+	case err := <-errCh:
+		if err != nil && err != http.ErrServerClosed {
+			log.Error("server error", "error", err)
+			os.Exit(1)
+		}
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	defer cancel()
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Error("failed to shutdown server", "error", err)
 		os.Exit(1)
 	}
+
+	log.Info("Order Service stopped")
 }
 
 func splitCSV(value string) []string {

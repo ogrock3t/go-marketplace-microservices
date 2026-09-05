@@ -26,7 +26,7 @@ func NewProductHandler(productService *service.ProductService) *ProductHandler {
 }
 
 func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 1048576) // Limit request body to 1MB
+	r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 	defer r.Body.Close()
 
 	var req dto.CreateProductRequest
@@ -74,7 +74,7 @@ func (h *ProductHandler) GetProductByID(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ProductHandler) UpdateProductByID(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 1048576) // Limit request body to 1MB
+	r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 	defer r.Body.Close()
 
 	var req dto.UpdateProductByIDRequest

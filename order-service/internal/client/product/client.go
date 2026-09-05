@@ -1,22 +1,52 @@
 package product
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"strings"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/encoding"
 
 	"order-service/internal/domain"
 )
 
-type Client struct {
-	baseURL    string
-	httpClient *http.Client
+const (
+	codecName            = "json"
+	inventoryServiceName = "product.v1.InventoryService"
+	reserveProductMethod = "/" + inventoryServiceName + "/ReserveProduct"
+	releaseProductMethod = "/" + inventoryServiceName + "/ReleaseProduct"
+)
+
+type jsonCodec struct{}
+
+func (jsonCodec) Marshal(v any) ([]byte, error) {
+	return json.Marshal(v)
 }
 
-type Product struct {
+func (jsonCodec) Unmarshal(data []byte, v any) error {
+	return json.Unmarshal(data, v)
+}
+
+func (jsonCodec) Name() string {
+	return codecName
+}
+
+func init() {
+	encoding.RegisterCodec(jsonCodec{})
+}
+
+type Client struct {
+	conn *grpc.ClientConn
+}
+
+type quantityRequest struct {
+	ProductID int64 `json:"product_id"`
+	Quantity  int64 `json:"quantity"`
+}
+
+type productResponse struct {
 	ID                int64  `json:"id"`
 	SellerID          int64  `json:"seller_id"`
 	CategoryID        int64  `json:"category_id"`
@@ -27,20 +57,26 @@ type Product struct {
 	Status            string `json:"status"`
 }
 
-func NewClient(baseURL string, httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
+func NewClient(target string) (*Client, error) {
+	conn, err := grpc.Dial(
+		target,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(jsonCodec{})),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create product grpc client: %w", err)
 	}
 
-	return &Client{
-		baseURL:    strings.TrimRight(baseURL, "/"),
-		httpClient: httpClient,
-	}
+	return &Client{conn: conn}, nil
+}
+
+func (c *Client) Close() error {
+	return c.conn.Close()
 }
 
 func (c *Client) ReserveProduct(ctx context.Context, productID int64, quantity int64) (*domain.ReservedProduct, error) {
-	product, err := c.sendQuantityRequest(ctx, "reserve", productID, quantity)
-	if err != nil {
+	var product productResponse
+	if err := c.invokeQuantityMethod(ctx, reserveProductMethod, productID, quantity, &product); err != nil {
 		return nil, err
 	}
 
@@ -51,41 +87,25 @@ func (c *Client) ReserveProduct(ctx context.Context, productID int64, quantity i
 }
 
 func (c *Client) ReleaseProduct(ctx context.Context, productID int64, quantity int64) error {
-	_, err := c.sendQuantityRequest(ctx, "release", productID, quantity)
-	return err
+	var product productResponse
+	return c.invokeQuantityMethod(ctx, releaseProductMethod, productID, quantity, &product)
 }
 
-func (c *Client) sendQuantityRequest(ctx context.Context, action string, productID int64, quantity int64) (*Product, error) {
-	body, err := json.Marshal(map[string]int64{"quantity": quantity})
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode %s request: %w", action, err)
+func (c *Client) invokeQuantityMethod(
+	ctx context.Context,
+	method string,
+	productID int64,
+	quantity int64,
+	out *productResponse,
+) error {
+	req := quantityRequest{
+		ProductID: productID,
+		Quantity:  quantity,
 	}
 
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		fmt.Sprintf("%s/api/v1/products/%d/%s", c.baseURL, productID, action),
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create %s request: %w", action, err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to %s product %d: %w", action, productID, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, fmt.Errorf("product service returned status %d for product %d", resp.StatusCode, productID)
+	if err := c.conn.Invoke(ctx, method, &req, out); err != nil {
+		return fmt.Errorf("product grpc call failed: %w", err)
 	}
 
-	var product Product
-	if err := json.NewDecoder(resp.Body).Decode(&product); err != nil {
-		return nil, fmt.Errorf("failed to decode %s response: %w", action, err)
-	}
-
-	return &product, nil
+	return nil
 }

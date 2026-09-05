@@ -22,7 +22,7 @@ func NewCategoryHandler(categoryService *service.CategoryService) *CategoryHandl
 }
 
 func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 1048576) // Limit request body to 1MB
+	r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 	defer r.Body.Close()
 
 	var req dto.CreateCategoryRequest
@@ -71,7 +71,7 @@ func (h *CategoryHandler) GetCategoryByID(w http.ResponseWriter, r *http.Request
 }
 
 func (h *CategoryHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 1048576) // Limit request body to 1MB
+	r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 	defer r.Body.Close()
 
 	var req dto.UpdateCategoryRequest

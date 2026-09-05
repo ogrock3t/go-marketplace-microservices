@@ -9,5 +9,5 @@ FROM alpine:3.21
 WORKDIR /app
 COPY --from=builder /app/product-service .
 COPY --from=builder /app/migrations ./migrations
-EXPOSE 8081
+EXPOSE 8081 9091
 CMD ["./product-service"]

@@ -76,7 +76,6 @@ func (s *CategoryService) DeleteCategory(ctx context.Context, id int64) error {
 	return nil
 }
 
-// ListCategories returns only root categories (those parent_id is null)
 func (s *CategoryService) ListCategories(ctx context.Context) (*dto.ListCategoriesResponse, error) {
 	list, err := s.categoryRepo.ListCategories(ctx)
 	if err != nil {
@@ -98,7 +97,6 @@ func (s *CategoryService) ListCategories(ctx context.Context) (*dto.ListCategori
 	}, nil
 }
 
-// ListSubcategories returns subcategories of a given parent category
 func (s *CategoryService) ListSubcategories(ctx context.Context, id int64) (*dto.ListSubcategoriesResponse, error) {
 	list, err := s.categoryRepo.ListSubcategories(ctx, id)
 	if err != nil {

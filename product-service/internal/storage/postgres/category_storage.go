@@ -109,7 +109,6 @@ func (s *CategoryStorage) DeleteCategory(ctx context.Context, id int64) error {
 	return nil
 }
 
-// ListCategories returns only root categories (those parent_id is null)
 func (s *CategoryStorage) ListCategories(ctx context.Context) ([]*domain.Category, error) {
 	const query = `
 		SELECT id, parent_id, name, description, created_at, updated_at
@@ -150,7 +149,6 @@ func (s *CategoryStorage) ListCategories(ctx context.Context) ([]*domain.Categor
 	return categories, nil
 }
 
-// ListSubcategories returns subcategories of a given parent category
 func (s *CategoryStorage) ListSubcategories(ctx context.Context, parentID int64) ([]*domain.Category, error) {
 	const query = `
 		SELECT id, parent_id, name, description, created_at, updated_at

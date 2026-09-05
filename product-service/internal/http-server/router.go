@@ -16,6 +16,11 @@ func NewRouter(
 ) http.Handler {
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
+
 	mux.HandleFunc("POST /api/v1/sellers", sellerHandler.CreateSeller)
 	mux.HandleFunc("GET /api/v1/sellers/{id}", sellerHandler.GetSellerByID)
 	mux.HandleFunc("PUT /api/v1/sellers/{id}", sellerHandler.UpdateSeller)
@@ -39,9 +44,5 @@ func NewRouter(
 
 	log.Info("Router successfully initialized with REST endpoints", slog.String("version", "v1"))
 
-	loggerMiddleware := logger.RequestLogger(log)
-
-	wrappedMux := loggerMiddleware(mux)
-
-	return wrappedMux
+	return logger.RequestLogger(log)(mux)
 }

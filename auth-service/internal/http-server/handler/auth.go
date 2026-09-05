@@ -37,7 +37,7 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 // @Failure      409 {string} string "email already exists"
 // @Router       /register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 1048576) // Limit request body to 1MB
+	r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 	defer r.Body.Close()
 
 	var req dto.RegisterRequest
@@ -77,7 +77,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {string} string "internal server error"
 // @Router       /login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 1048576) // Limit request body to 1MB
+	r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 	defer r.Body.Close()
 
 	var req dto.LoginRequest
@@ -117,7 +117,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {string} string "internal server error"
 // @Router       /refresh-token [post]
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 1048576) // Limit request body to 1MB
+	r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 	defer r.Body.Close()
 
 	var req dto.RefreshTokenRequest

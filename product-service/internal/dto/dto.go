@@ -51,14 +51,14 @@ type DeleteSellerRequest struct {
 }
 
 type CreateCategoryRequest struct {
-	ParentID    *int64 `json:"parent_id"` // nil = root category
+	ParentID    *int64 `json:"parent_id"`
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 }
 
 type UpdateCategoryRequest struct {
 	ID          int64  `json:"-"`
-	ParentID    *int64 `json:"parent_id"` // nil = root category
+	ParentID    *int64 `json:"parent_id"`
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 }
@@ -93,7 +93,7 @@ type GetSellerByIDResponse struct {
 
 type GetCategoryByIDResponse struct {
 	ID          int64  `json:"id"`
-	ParentID    *int64 `json:"parent_id"` // nil = root category
+	ParentID    *int64 `json:"parent_id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }

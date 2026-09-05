@@ -11,8 +11,6 @@ import (
 	"github.com/ogrock3t/go-marketplace-microservices/authentication-service/internal/dto"
 )
 
-// mocks
-
 type mockRepository struct {
 	user         *domain.User
 	err          error
@@ -60,8 +58,6 @@ func (m *mockTokenGenerator) GenerateTokenPair(userID int64, email string) (*dto
 		RefreshToken: "refresh",
 	}, nil
 }
-
-// tests
 
 func TestRegister_EmailAlreadyExists(t *testing.T) {
 	svc := NewAuthService(&mockRepository{

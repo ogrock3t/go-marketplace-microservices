@@ -3,15 +3,20 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"google.golang.org/grpc"
 
 	"product-service/internal/config"
+	"product-service/internal/grpcserver"
 	httpserver "product-service/internal/http-server"
 	"product-service/internal/http-server/handler"
 	"product-service/internal/service"
@@ -38,7 +43,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	db, err := storage.NewConnection(ctx, cfg.DatabaseDSN)
 	if err != nil {
@@ -60,12 +66,47 @@ func main() {
 	productHandler := handler.NewProductHandler(productService)
 
 	router := httpserver.NewRouter(sellerHandler, categoryHandler, productHandler, log)
+	httpServer := &http.Server{
+		Addr:    cfg.HTTPAddr,
+		Handler: router,
+	}
 
-	log.Info("starting server", "addr", cfg.HTTPAddr)
-	if err := http.ListenAndServe(cfg.HTTPAddr, router); err != nil {
-		log.Error("server error", "error", err)
+	grpcListener, err := net.Listen("tcp", cfg.GRPCAddr)
+	if err != nil {
+		log.Error("failed to listen grpc", "error", err)
 		os.Exit(1)
 	}
+	grpcServer := grpc.NewServer()
+	grpcserver.RegisterInventoryServiceServer(grpcServer, grpcserver.NewInventoryServer(productService))
+
+	errCh := make(chan error, 2)
+	go func() {
+		log.Info("starting http server", "addr", cfg.HTTPAddr)
+		errCh <- httpServer.ListenAndServe()
+	}()
+	go func() {
+		log.Info("starting grpc server", "addr", cfg.GRPCAddr)
+		errCh <- grpcServer.Serve(grpcListener)
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Info("shutdown signal received")
+	case err := <-errCh:
+		if err != nil && err != http.ErrServerClosed {
+			log.Error("server error", "error", err)
+			os.Exit(1)
+		}
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	defer cancel()
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Error("failed to shutdown http server", "error", err)
+		os.Exit(1)
+	}
+	grpcServer.GracefulStop()
+	log.Info("Product Service stopped")
 }
 
 func migrationDSN(dsn string) string {

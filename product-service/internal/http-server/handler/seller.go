@@ -20,7 +20,7 @@ func NewSellerHandler(sellerService *service.SellerService) *SellerHandler {
 }
 
 func (h *SellerHandler) CreateSeller(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 1048576) // Limit request body to 1MB
+	r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 	defer r.Body.Close()
 
 	var req dto.CreateSellerRequest
@@ -69,7 +69,7 @@ func (h *SellerHandler) GetSellerByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SellerHandler) UpdateSeller(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 1048576) // Limit request body to 1MB
+	r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 	defer r.Body.Close()
 
 	var req dto.UpdateSellerRequest

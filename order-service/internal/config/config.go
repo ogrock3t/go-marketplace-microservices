@@ -8,8 +8,8 @@ import (
 type Config struct {
 	HTTPAddr             string
 	DatabaseDSN          string
-	ProductServiceURL    string
-	RequestTimeout       time.Duration
+	ProductGRPCAddr      string
+	ShutdownTimeout      time.Duration
 	KafkaBrokers         string
 	OrderEventsTopic     string
 	PaymentEventsTopic   string
@@ -17,16 +17,16 @@ type Config struct {
 }
 
 func Load() *Config {
-	requestTimeout, err := time.ParseDuration(getEnv("REQUEST_TIMEOUT", "5s"))
+	shutdownTimeout, err := time.ParseDuration(getEnv("SHUTDOWN_TIMEOUT", "10s"))
 	if err != nil {
-		requestTimeout = 5 * time.Second
+		shutdownTimeout = 10 * time.Second
 	}
 
 	return &Config{
 		HTTPAddr:             getEnv("HTTP_ADDR", ":8082"),
 		DatabaseDSN:          getEnv("DATABASE_DSN", ""),
-		ProductServiceURL:    getEnv("PRODUCT_SERVICE_URL", "http://product-service:8081"),
-		RequestTimeout:       requestTimeout,
+		ProductGRPCAddr:      getEnv("PRODUCT_GRPC_ADDR", "product-service:9091"),
+		ShutdownTimeout:      shutdownTimeout,
 		KafkaBrokers:         getEnv("KAFKA_BROKERS", ""),
 		OrderEventsTopic:     getEnv("ORDER_EVENTS_TOPIC", "orders"),
 		PaymentEventsTopic:   getEnv("PAYMENT_EVENTS_TOPIC", "payments"),
